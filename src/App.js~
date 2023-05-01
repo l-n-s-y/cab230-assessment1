@@ -46,7 +46,7 @@ const App = (props) => {
 	return (
 		<BrowserRouter>
 			<Routes>
-				<Route path="/" element={<Movies initialData={movieData} />} />
+				<Route path="/" element={<Movies movieData={movieData} />} />
 				<Route path="/movie" element={<Movie />} />
 				<Route path="/person" element={<Person />} />
 				<Route path="/user" element={<User />} />
