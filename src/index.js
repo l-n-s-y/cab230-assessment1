@@ -1,52 +1,33 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './index.css';
-import { Link } from "react-router-dom";
+import React, { useState, setState, useEffect } from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 
-import App from './App';
+// App
+import App from "./App";
 
-const UserMenu = (props) => {
-	const userName = localStorage.getItem("userName");
-	const signedIn = userName !== null;
+// Custom Components
+import { UserMenu, Header, Footer } from "./components/universal";
 
-	if (signedIn) {
-		return (
-			<div>
-				<a>{userName}, </a>
-				<Link to="/user?mode=logout">Logout</Link>
-			</div>
-		);
-	}
+// Default Pages
+import Movie from "./pages/Movie";
+import Person from "./pages/Person";
+import User from "./pages/User";
 
-	return (
-		<div>
-			<Link to="/user?mode=login">Login</Link>
-			<a>/</a>
-			<Link to="/user?mode=register">Register</Link>
-		</div>
-	);
-};
+// Error handling
+import Error from "./pages/Error";
 
-export function Header(props) {
-	return (
-		<div className="Header">
-			<Link to="/">Home</Link>
-			<input />
-			<UserMenu />
-		</div>
-	);
-}
-
-export function Footer(props) {
-	return (
-		<h3>2023 (c) Lindsay Fry</h3>
-	);
-}
-
-const test="hello";
-
-const root = ReactDOM.createRoot(document.getElementById('root'));
+const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
-	<App />
+	<div>
+		<BrowserRouter>
+			<Routes>
+				<Route path='*' element={<Error errorCode="404" />} />
+				<Route path="/" element={<App />} /> 
+				<Route path="/movie" element={<Movie />} />
+				<Route path="/person" element={<Person />} />
+				<Route path="/user" element={<User />} />
+				<Route path="/error" element={<Error />} />
+			</Routes>
+		</BrowserRouter>
+	</div>
 );
-

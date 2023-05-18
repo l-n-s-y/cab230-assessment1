@@ -1,20 +1,19 @@
-import React, { useState, setState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
+//MUI 5 Components
 import { Button, Input, Select } from "@mui/material";
-import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { makeStyles } from "@mui/styles";
 import Link from "@mui/material/Link";
 import AppBar from "@mui/material/AppBar";
+import CssBaseline from '@mui/material/CssBaseline';
 import MenuItem from  "@mui/material/MenuItem";
 import InputLabel from  "@mui/material/InputLabel";
 import FormControl from  "@mui/material/FormControl";
-import FormGroup from  "@mui/material/FormGroup";
 import Typography from  "@mui/material/Typography";
 import Toolbar from  "@mui/material/Toolbar";
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
-import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
 
 
@@ -66,10 +65,8 @@ const useStyles = makeStyles((theme) => ({
 			direction: "column",
 			alignItems: "center",
 			justifyContent: "center",
-			paddingTop: 150,
+			paddingTop: 50,
 			bottom: 10,
-			left: "50%",
-			marginLeft: -100,
 		},
 	}));
 
@@ -84,18 +81,18 @@ const UserMenu = (props) => {
 	if (signedIn) {
 		return (
 			<div>
-				<a>{userName}{', '} 
-				<Link color="inherit" href="/user?mode=logout" {...props}>Logout</Link>
-				</a>
+				<Typography variant="h7">{userName}{', '} 
+					<Link color="inherit" href="/user?mode=logout" {...props}>Logout</Link>
+				</Typography>
 			</div>
 		);
 	}
 
 	return (
 		<Box  {...props}>
-			<Link color="inherit" href="/user?mode=login">Login</Link>
-			<a>/</a>
-			<Link color="inherit" href="/user?mode=register">Register</Link>
+			<Typography variant="h7"><Link color="inherit" href="/user?mode=login">Login</Link>
+			/
+			<Link color="inherit" href="/user?mode=register">Register</Link></Typography>
 		</Box>
 	);
 };
@@ -106,11 +103,6 @@ export function Header(props) {
 
 	const navigate = useNavigate();
 	const classes = useStyles();
-	const theme = createTheme({
-		components: {
-
-		}
-	});
 
 	const handleSearchSubmit = (event) => {
 		event.preventDefault();
@@ -148,9 +140,9 @@ export function Header(props) {
 	}
 
 	return (
-		<ThemeProvider theme={theme}>
 			<AppBar position="sticky">
 				<Toolbar>
+					<CssBaseline />
 					<Box className={classes.start}>
 						<IconButton edge="start" color="inherit" onClick={() => {navigate('/');window.location.reload()}}>MovieSearch</IconButton>
 					</Box>
@@ -197,7 +189,6 @@ export function Header(props) {
 					</Box>
 				</Toolbar>
 			</AppBar>
-		</ThemeProvider>
 	);
 }
 

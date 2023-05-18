@@ -1,58 +1,142 @@
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
-import { useState, useEffect, useContext } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import React, { useCallback, useMemo, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 
+import { makeStyles } from "@mui/styles";
+import Typography from "@mui/material/Typography";
+
+// AG-Grid Stylesheets
 import "ag-grid-community/styles/ag-grid.css";
-import "ag-grid-community/styles/ag-theme-balham.css";
+import "ag-grid-community/styles/ag-theme-alpine.css";
 
-// Context
-import { AppContext } from "./index";
+// Custom Components
+import { Header, Footer } from "./components/universal";
 
-// Pages
-import Movies from "./Movies";
-import Movie from "./pages/Movie";
-import Person from "./pages/Person";
-import User from "./pages/User";
-
-// Error handling
-import Error from "./pages/Error";
-
-// Util functions
+// Utility functions
 import { apiFetch } from "./util/api";
 
 const App = (props) => {
-	const [movieData, setMovieData] = useState([]);
+	const useStyles = makeStyles((theme) => ({
+		centerGrid: {
+			display: "flex",
+			flexDirection: "column",
+			justifyContent: "center",
+			alignItems: "center",
+			paddingTop: 50,
+			paddingBottom: 40
+		}
+	}));
 
-	useEffect(() => {
-		console.log("DEBUG: Fetching movie listings.");
-		apiFetch("/movies/search")
-		.then(response => response.json())
-		.then(movieData => {
-			const movieArray = movieData.data.map(movie => {
-				return {
-					classification: movie.classification,
-					imdbID: movie.imdbID,
-					imdbRating: movie.imdbRating,
-					metacriticRating: movie.metacriticRating,
-					rottenTomatoesRating: movie.rottenTomatoesRating,
-					title: movie.title,
-					year: movie.year
-				};
-			});
-			setMovieData(movieArray);
-		});
+	const classes = useStyles();
+	const navigate = useNavigate();
+
+	const [searchParams] = useSearchParams();
+	const queryTitle = searchParams.get("title");
+	const queryYear = searchParams.get("year");
+	
+	const defaultColDef = useMemo(() => {
+		return {
+			resizable: true,
+			minWidth: 300
+		};
+	}, []);
+
+	const [columnDefs, setColumnDefs] = useState([
+		{ headerName: "IMDB ID", field: "imdbID", minWidth: 50},
+		{ headerName: "Title", field: "title",
+			cellRenderer: (props) => {
+				if (props.value !== undefined) {
+					return props.value;
+				}
+			},
+		},
+		{ headerName: "Classification", field: "classification"},
+		{ headerName: "IMDB Rating", field: "imdbRating"},
+		{ headerName: "Year", field: "year"}
+	]);
+
+	const fetchData = (pageNum) => {
+		let apiQuery = `/movies/search?page=${pageNum}`;
+		if (queryTitle) {
+			apiQuery += `&title=${queryTitle}`;
+		}
+
+		if (queryYear) {
+			apiQuery += `&year=${queryYear}`;
+		}
+
+		return apiFetch(apiQuery)
+		.then((resp) => resp.json())
+		.then((resp) => {
+			if (resp.error) {
+				console.error("[MAIN GRID] Unanticipated Error: ", resp.error);
+				return ({error: true, message: resp.message});
+			}
+			return resp;
+		})
+		.catch(err => console.error("[MAIN GRID] Unanticipated Error: ", err));
+	};
+
+	const onGridReady = useCallback((params) => {
+		let pageNumber = 1;
+		let totalRows = 0;
+		const dataSource = {
+			rowCount: undefined,
+			getRows: (params) => {
+				fetchData(pageNumber)
+				.then((data) => {
+					if (data.error) {
+						// Output error message to grid
+						params.successCallback([{title: data.message}], 1);
+						return;
+					}
+
+					pageNumber = data.pagination.nextPage;
+					
+					let lastRow = -1;
+
+					// Data is shorter than default row cache block.
+					if (params.startRow + data.data.length <= params.endRow) {
+						lastRow = params.startRow + data.data.length;
+					}
+					
+					params.successCallback(data.data, lastRow);
+				})
+				.catch((err) => {
+					params.successCallback({title: err}, 1);
+				})
+			}
+		}
+		params.api.setDatasource(dataSource);
 	}, []);
 
 	return (
-		<BrowserRouter>
-			<Routes>
-				<Route path="/" element={<Movies initialData={movieData} />} />
-				<Route path="/movie" element={<Movie />} />
-				<Route path="/person" element={<Person />} />
-				<Route path="/user" element={<User />} />
-				<Route path="/error" element={<Error />} />
-			</Routes>
-		</BrowserRouter>
+		<div>
+			<Header />
+
+			<div className={classes.centerGrid}>
+				<Typography variant="h4">Lindsay Fry presents: Movie Search</Typography>
+				<Typography sx={{paddingBottom: 3}} variant="h5">The easy-to-use film detail database. Enjoy your stay.</Typography>
+				<div className="ag-theme-alpine" style={{ height: "600px", width: "75%" }}>
+					<AgGridReact
+						columnDefs={columnDefs}
+						defaultColDef={defaultColDef}
+						rowBuffer={0}
+						rowSelection={'single'}
+						rowModelType={'infinite'}
+						cacheBlockSize={99}
+						cacheOverflowSize={2}
+						maxConcurrentDatasourceRequests={1}
+						infiniteInitialRowCount={1}
+						maxBlocksInCache={13000}
+						onGridReady={onGridReady}
+						onRowClicked={row => navigate(`/movie?id=${row.data.imdbID}`)}
+					/>
+				</div>
+			</div>
+
+			<Footer />
+		</div>
 	);
 }
 

@@ -28,8 +28,10 @@ export function apiPost(endpoint,data) {
 }
 
 export function hasTokenExpired(tokenExpiry,issuedAt) {
+	console.log(tokenExpiry, issuedAt);
 	let currentTime = Date.now()/1000;
 
+	console.log(currentTime-issuedAt);
 	if (currentTime-issuedAt >= tokenExpiry) {
 		return true;
 	}
@@ -39,9 +41,7 @@ export function hasTokenExpired(tokenExpiry,issuedAt) {
 
 export function storeTokens(bearerToken, refreshToken) {
 	// Store auth tokens
-	console.log(localStorage.getItem("bearerToken"));
 	localStorage.setItem("bearerToken",bearerToken.token);
-	console.log(localStorage.getItem("bearerToken"));
 	localStorage.setItem("refreshToken",refreshToken.token);
 
 	// Store auth time (for expiration calculation)
@@ -52,58 +52,53 @@ export function storeTokens(bearerToken, refreshToken) {
 	localStorage.setItem("refreshExp",refreshToken.expires_in);
 }
 
-function clearUserCache() {
-	localStorage.setItem("bearerToken",null);
-	localStorage.setItem("refreshToken",null);
-
-	localStorage.setItem("issuedAt",null);
-
-	localStorage.setItem("bearerExp",null);
-	localStorage.setItem("refreshExp",null);
-
-	localStorage.setItem("userName",null);
+export function clearUserCache() {
+	localStorage.clear();
 }
 
 export function refreshTokens() {
-	console.log("DEBUG: Refreshing tokens.");
 	const rToken = localStorage.getItem("refreshToken");
-
-	/*const issuedAt = localStorage.getItem("issuedAt");
 	const rExp = localStorage.getItem("refreshExp");
-	const bExp = localStorage.getItem("bearerExp");
 
-	console.log(rExp);
-	console.log(issuedAt);
-	console.log(Date.now()/1000);
-	console.log(Number(rExp)+Number(issuedAt));
-
-	console.log(hasTokenExpired(rExp,issuedAt));
-	console.log(hasTokenExpired(bExp,issuedAt));*/
+	if (hasTokenExpired(rExp,localStorage.getItem("issuedAt")) === true) {
+		clearUserCache();
+		return false;
+	}
 
 	if (rToken) {
 		const tokenContent = JSON.stringify({refreshToken: rToken});
 		apiPost("/user/refresh",tokenContent)
-		.then(response => response.json())
 		.then(response => {
-			if (response.error) {
-				console.log(`ERROR: Failed to refresh tokens\nServer error: ${response.message}`);
+			// Rate limit exceeded. User may be abusing remote server.
+			if (response.status === 429) {
 				clearUserCache();
+				return false;
+			}
+			return response.json();
+		})
+		.then(response => {
+			console.log(response);
+			if (response.error) {
 				// User must sign in again.
-				//navigate("/user?mode=login");
+				clearUserCache();
 				return false;
 			} else {
 				// Store auth tokens
 				storeTokens(response.bearerToken,response.refreshToken);
-				console.log("DEBUG: Tokens refreshed.");
+
+				// Refresh page to reload content with valid auth
+				window.location.reload();
 			}
 		})
 		.catch(err => {
-			console.log(`ERROR: Failed to refresh tokens\nRequest error: ${err}`);
+			console.error("[API] Unanticipated Error: ", err);
 			return false;
 		});
 
+		// Tokens were refreshed successfully.
 		return true;
 	}
 
+	// No refresh token given
 	return false;
 }
